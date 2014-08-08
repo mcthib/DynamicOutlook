@@ -1,5 +1,0 @@
-c:\Users\thvial\documents\visual studio 2013\Projects\OOM2\DynamicOutlook\obj\Debug\DynamicOutlook.csprojResolveAssemblyReference.cache
-c:\Users\thvial\documents\visual studio 2013\Projects\OOM2\DynamicOutlook\bin\Debug\DynamicOutlook.dll
-c:\Users\thvial\documents\visual studio 2013\Projects\OOM2\DynamicOutlook\bin\Debug\DynamicOutlook.pdb
-c:\Users\thvial\documents\visual studio 2013\Projects\OOM2\DynamicOutlook\obj\Debug\DynamicOutlook.dll
-c:\Users\thvial\documents\visual studio 2013\Projects\OOM2\DynamicOutlook\obj\Debug\DynamicOutlook.pdb
