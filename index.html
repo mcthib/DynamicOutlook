@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>DynamicOutlook by mcthib</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/mcthib/DynamicOutlook">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/mcthib/DynamicOutlook/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/mcthib/DynamicOutlook/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>DynamicOutlook</h1>
+          <p>A small set of classes to interact with Outlook via COM dynamically without referencing the Office assemblies.</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/mcthib">mcthib</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
+        </div>
+
+        <h3>
+<a name="using-outlook-apis-externally-without-referencing-the-office-assemblies" class="anchor" href="#using-outlook-apis-externally-without-referencing-the-office-assemblies"><span class="octicon octicon-link"></span></a>Using Outlook APIs externally without referencing the Office assemblies</h3>
+
+<p>I've been playing around on a small <del>project</del> experiment, and found myself wanting to programmatically send emails. I didn't want to have to worry about using my own SMTP server and credentials, so naturally I wanted to use whatever the user had installed, if at all possible.</p>
+
+<p>This being a Windows project for the office worker, quite a large portion of my target audience would have Outlook installed. Web-based mailing systems have been growing in popularity for sure but I'm not certain how I would go about sending emails transparently using those. Maybe something to try out later on. Anyways I settled on using Outlook.</p>
+
+<p>All Office apps have an object model exposed via COM, which can be used from managed code via the <a href="http://msdn.microsoft.com/en-us/library/15s06t57.aspx">PIA</a>. This has the advantage of exposing data types (for strong typing) and making things like <a href="http://msdn.microsoft.com/en-us/library/hcw1s69b.aspx">IntelliSense</a> work in Visual Studio. But it means shipping an extra DLL and takes some of the fun away so instead I decided to use the <a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms221608(v=vs.85).aspx">IDispatch</a> automation interface exposed by Outlook for VBA projects and late-bind at runtime.</p>
+
+<p>I'd already done something like that years ago for an assignment when I worked at Barclays in London, but found that .Net 4.0 has a much, much easier way to do it now. They introduced the <a href="http://msdn.microsoft.com/en-us/library/dd264736.aspx">dynamic</a> keyword that actually does all the tedious work of discovering method and property signatures. i.e., the compiler will let you call methods it doesn't know actually exist on dynamic variables. That's pretty cool! Note that this is very different from the <a href="http://msdn.microsoft.com/en-us/library/bb383973.aspx">var</a> keyword, which does enforce type safety at compile time and is just syntactic sugar.</p>
+
+<pre><code>// No idea what datatype "Recipients" is at compile time
+dynamic recipients = myMailItem.Recipients;
+
+// We'll figure out whether Add() exists and what its arguments are at runtime
+recipients.Add("joe@schmoe.com");
+</code></pre>
+
+<p>Of course, I should point out that the resulting code is slower than if I had hand-coded the IDispatch invocations (I would have probably "assumed" the methods I knew to be there would be there), but for my quick and dirty project it was plenty fast and made my life much simpler.</p>
+
+<p>The classes can be used to:</p>
+
+<ol>
+<li>Test whether any version of Outlook is installed locally</li>
+<li>Send an email using Outlook, with a plain text body and any number of attachments</li>
+<li>If sending the email required us to start an instance of Outlook, the code will attempt to close it when it's done</li>
+</ol><p>Some notes:</p>
+
+<ul>
+<li>This code only supports starting the default version of Outlook (in case several are installed)</li>
+<li>Unlike other Office apps, Outlook doesn't expose an Application.Handle property that allows us to trace the instance back to a process ID. So I use a dirty hack and compare the list of "outlook.exe" processes running before and after we create the instance. This is probably because unlike other Office apps, Outlook can run minimized to the tray and doesn't necessarily have any windows (called Explorers in its vernacular) opened.</li>
+<li>Closing Outlook programmatically is unreliable. I've gone to a number of sources to try and understand if I was doing something wrong, but even making sure I release all my handles properly doesn't guarantee good behavior. In fact, the exact same code will sometimes exit Outlook properly and sometimes not. I would usually deal with this in two ways: kill the process after a time if it still runs after I've told it to exit, or use <a href="http://http://msdn.microsoft.com/en-us/library/windows/desktop/ms684161(v=vs.85).aspx">Job</a> objects to control the lifetime. The latter is not practical for my purposes, and either way killing the Outlook process is a bad idea as it may corrupt its database. So instead if Outlook doesn't quit after some time we cheat and just tell it to make itself visible so the user at least knows it's running and can close it themselves.</li>
+<li>Another note on the above: using the PIA seems to fix this problem in my casual tests (hard to know if it fixes it 100%), as does showing Outlook before calling Application.Quit(). I didn't want to use the PIA, and flashing Outlook briefly is a worse UX experience than having Outlook show up in my opinion.</li>
+<li>This is mitigated by the fact that I expect Outlook to already be running in a lot of cases (and therefore we will not try to close it on exit) for the purposes of my experiment.</li>
+</ul>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
